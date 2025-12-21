@@ -1,0 +1,38 @@
+[package]
+name = "ocean"
+version = "0.1.0"
+edition = "2021"
+description = "محيط - Arabic Shell | A modern shell with Arabic commands"
+authors = ["Tarqeem Project <tarqeem@example.com>"]
+license = "MIT"
+repository = "https://github.com/osama1998H/ocean"
+keywords = ["shell", "arabic", "cli", "terminal", "tarqeem"]
+categories = ["command-line-utilities"]
+readme = "README.md"
+
+[dependencies]
+rustyline = "14.0"              # Line editing, history, completion
+crossterm = "0.28"              # Cross-platform terminal manipulation
+unicode-segmentation = "1.11"   # Arabic text segmentation
+unicode-width = "0.2"           # Character width calculation (RTL)
+dirs = "5.0"                    # Home directory and standard paths
+colored = "2.1"                 # Terminal colors
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", features = ["process", "signal"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_System_Console"] }
+
+[dev-dependencies]
+assert_cmd = "2.0"              # Testing CLI applications
+predicates = "3.1"              # Assertion predicates
+
+[[bin]]
+name = "ocean"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
