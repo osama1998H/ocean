@@ -15,8 +15,11 @@ rustyline = "14.0"              # Line editing, history, completion
 crossterm = "0.28"              # Cross-platform terminal manipulation
 unicode-segmentation = "1.11"   # Arabic text segmentation
 unicode-width = "0.2"           # Character width calculation (RTL)
+unicode-normalization = "0.1"   # NFC normalization for Arabic
 dirs = "5.0"                    # Home directory and standard paths
 colored = "2.1"                 # Terminal colors
+regex = "1.10"                  # For search command
+walkdir = "2.4"                 # For recursive file search
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", features = ["process", "signal"] }
@@ -27,6 +30,7 @@ windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_System_
 [dev-dependencies]
 assert_cmd = "2.0"              # Testing CLI applications
 predicates = "3.1"              # Assertion predicates
+tempfile = "3.10"               # Temporary directories for tests
 
 [[bin]]
 name = "ocean"

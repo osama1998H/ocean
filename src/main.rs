@@ -3,6 +3,13 @@
 //! A modern, lightweight shell with Arabic commands.
 //! Part of the Tarqeem Project - Arabic Programming Ecosystem.
 //!
+//! ## Architecture
+//!
+//! The shell uses a three-stage pipeline:
+//! 1. **Lexer** - Tokenizes input with Arabic support
+//! 2. **Parser** - Builds an AST from tokens
+//! 3. **Executor** - Executes commands from the AST
+//!
 //! ## Commands (الأوامر)
 //! - `اطبع` (echo) - Print text
 //! - `اعرض` (ls) - List files
@@ -13,12 +20,18 @@
 //! - `مساعدة` (help) - Show help
 
 mod commands;
+mod lexer;
+mod parser;
+mod executor;
+mod utils;
 
 use std::env;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-use commands::execute_command;
+use lexer::Lexer;
+use parser::Parser;
+use executor::{Executor, CommandResult};
 
 /// Shell name in Arabic
 const SHELL_NAME: &str = "محيط";
@@ -28,6 +41,9 @@ const VERSION: &str = "0.1.0";
 fn main() {
     // Print welcome message
     print_welcome();
+
+    // Create executor
+    let mut executor = Executor::new();
 
     // Main REPL loop
     loop {
@@ -45,11 +61,36 @@ fn main() {
             continue;
         }
 
-        // Execute command
-        let should_exit = execute_command(&input);
-        if should_exit {
-            println!("مع السلامة! (Goodbye!)");
-            break;
+        // Tokenize
+        let mut lexer = Lexer::new(&input);
+        let tokens = lexer.tokenize();
+
+        // Parse
+        let mut parser = Parser::new(tokens);
+        let ast = match parser.parse() {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                eprintln!("{}", e);
+                continue;
+            }
+        };
+
+        // Execute
+        let result = executor.execute(ast);
+        match result {
+            CommandResult::Exit(code) => {
+                println!("مع السلامة! (Goodbye!)");
+                std::process::exit(code);
+            }
+            CommandResult::Success(output) => {
+                if !output.is_empty() {
+                    print!("{}", output);
+                }
+            }
+            CommandResult::Error(msg) => {
+                eprintln!("{}", msg);
+            }
+            CommandResult::None => {}
         }
     }
 }
@@ -64,6 +105,8 @@ fn print_welcome() {
     println!("║                                                           ║");
     println!("║   مشروع ترقيم - Tarqeem Project                           ║");
     println!("║   اكتب 'مساعدة' للمساعدة | Type 'مساعدة' for help          ║");
+    println!("║                                                           ║");
+    println!("║   ✨ دعم الأنابيب والتوجيه: cmd1 | cmd2, cmd > file        ║");
     println!("║                                                           ║");
     println!("╚═══════════════════════════════════════════════════════════╝");
     println!();
