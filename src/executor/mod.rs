@@ -10,6 +10,7 @@ mod pipeline;
 
 use crate::parser::{Command, Redirect, RedirectKind};
 use crate::commands;
+use crate::utils::{shape_if_arabic, contains_arabic, right_align};
 
 use std::fs::{File, OpenOptions};
 use std::io::Write;
@@ -53,19 +54,22 @@ impl CommandResult {
 pub struct Executor {
     /// Last exit code
     pub last_exit_code: i32,
+    /// Whether to use padding for RTL alignment (non-VTE terminals)
+    pub use_rtl_padding: bool,
 }
 
 impl Default for Executor {
     fn default() -> Self {
-        Self::new()
+        Self::new(false)
     }
 }
 
 impl Executor {
     /// Create a new executor
-    pub fn new() -> Self {
+    pub fn new(use_rtl_padding: bool) -> Self {
         Self {
             last_exit_code: 0,
+            use_rtl_padding,
         }
     }
 
@@ -218,8 +222,15 @@ impl Executor {
         // Return the final output
         match input {
             Some(output) => {
-                // Print final output
-                print!("{}", output);
+                // Print final output with Arabic shaping and RTL alignment
+                for line in output.lines() {
+                    let shaped = shape_if_arabic(line);
+                    if self.use_rtl_padding && contains_arabic(&shaped) {
+                        println!("{}", right_align(&shaped));
+                    } else {
+                        println!("{}", shaped);
+                    }
+                }
                 CommandResult::None
             }
             None => CommandResult::None,

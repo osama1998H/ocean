@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tarqeem](https://img.shields.io/badge/Tarqeem-Project-green.svg)](https://github.com/osama1998H/tarqeem)
-[![Tests](https://img.shields.io/badge/Tests-29%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-38%20passing-brightgreen.svg)]()
 
 **صدفة حديثة وخفيفة بأوامر عربية بالكامل**
 
@@ -194,7 +194,9 @@ README.md
 - [x] تسلسل الأوامر (`&&`, `||`, `;`)
 - [x] `ابحث` (grep) - البحث في الملفات
 - [x] `صلاحيات` (chmod) - تغيير الصلاحيات
-- [x] 29 اختبار وحدة
+- [x] دعم RTL - محاذاة النص من اليمين لليسار
+- [x] تشكيل الحروف العربية (arabic_reshaper)
+- [x] 38 اختبار وحدة
 
 ### المرحلة 3: ميزات متقدمة
 - [ ] `مالك` (chown) - تغيير المالك
@@ -230,7 +232,8 @@ cargo test -- --nocapture
 - اختبارات Lexer: 13
 - اختبارات Parser: 13
 - اختبارات AST: 3
-- **المجموع: 29 اختبار ناجح**
+- اختبارات RTL/Arabic: 9
+- **المجموع: 38 اختبار ناجح**
 
 ---
 
@@ -287,10 +290,12 @@ A modern, lightweight shell with Arabic commands. Part of the Tarqeem Arabic Pro
 ## Features
 
 - **Native Arabic Commands**: All commands in Arabic (`اطبع`, `ابحث`, `انتقل`, etc.)
+- **RTL Support**: Right-to-left text alignment for Arabic output
+- **Arabic Letter Shaping**: Properly connected Arabic letters using `arabic_reshaper`
 - **Pipes & Redirection**: Full support for `|`, `>`, `>>`, `<`
 - **Command Chaining**: `&&`, `||`, `;` operators
 - **Search**: Built-in `ابحث` (grep) command
-- **29 Unit Tests**: Comprehensive test coverage
+- **38 Unit Tests**: Comprehensive test coverage
 
 ## Quick Start
 
@@ -363,7 +368,7 @@ Input → Lexer → Parser → Executor → Output
 
 ```bash
 cargo test
-# 29 tests passing
+# 38 tests passing
 ```
 
 See the Arabic documentation above for complete details.

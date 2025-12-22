@@ -7,7 +7,7 @@ mod builtin;
 mod filesystem;
 
 use crate::executor::CommandResult;
-use crate::utils::expand_tilde;
+use crate::utils::{expand_tilde, shape_arabic};
 
 use std::env;
 use std::fs;
@@ -120,45 +120,47 @@ pub fn execute_command(input: &str) -> bool {
 
 /// Show help message (مساعدة)
 fn cmd_help() -> CommandResult {
-    let help = r#"
-╔═══════════════════════════════════════════════════════════════════╗
-║                    أوامر محيط - Ocean Commands                    ║
-╠═══════════════════════════════════════════════════════════════════╣
-║                                                                   ║
-║  الأوامر الأساسية (Basic Commands):                               ║
-║  ─────────────────────────────────                                ║
-║  مساعدة        │ help     │ عرض هذه المساعدة                      ║
-║  خروج          │ exit     │ الخروج من الصدفة                      ║
-║  امسح          │ clear    │ مسح الشاشة                            ║
-║  اصدار         │ version  │ عرض الإصدار                           ║
-║                                                                   ║
-║  أوامر الملفات (File Commands):                                   ║
-║  ─────────────────────────────                                    ║
-║  اطبع <نص>      │ echo     │ طباعة نص                              ║
-║  اين           │ pwd      │ المسار الحالي                         ║
-║  انتقل <مسار>   │ cd       │ الانتقال إلى مجلد                      ║
-║  اعرض [مسار]   │ ls       │ عرض الملفات                           ║
-║  اقرأ <ملف>    │ cat      │ قراءة محتوى ملف                       ║
-║  انشئ <مجلد>   │ mkdir    │ إنشاء مجلد                            ║
-║  المس <ملف>    │ touch    │ إنشاء ملف فارغ                        ║
-║  احذف <ملف>    │ rm       │ حذف ملف                               ║
-║  انسخ <من> <إلى> │ cp       │ نسخ ملف                               ║
-║  انقل <من> <إلى> │ mv       │ نقل ملف                               ║
-║  ابحث <نص>     │ grep     │ البحث في النص                         ║
-║  صلاحيات       │ chmod    │ تغيير صلاحيات الملف                   ║
-║                                                                   ║
-║  العوامل (Operators):                                             ║
-║  ─────────────────                                                ║
-║  cmd1 | cmd2   │ أنبوب    │ توصيل مخرج الأول بمدخل الثاني          ║
-║  cmd > ملف     │ إلى      │ كتابة المخرج إلى ملف                  ║
-║  cmd >> ملف    │ الحق     │ إضافة المخرج إلى ملف                  ║
-║  cmd < ملف     │ من       │ قراءة المدخل من ملف                   ║
-║  cmd1 && cmd2  │ و        │ تنفيذ الثاني إذا نجح الأول             ║
-║  cmd1 || cmd2  │ أو       │ تنفيذ الثاني إذا فشل الأول             ║
-║  cmd1 ; cmd2   │ ثم       │ تنفيذ الأوامر بالترتيب                 ║
-║                                                                   ║
-╚═══════════════════════════════════════════════════════════════════╝
-"#;
+    // Build help text with shaped Arabic for each line
+    let mut help = String::new();
+    help.push('\n');
+    help.push_str("╔═══════════════════════════════════════════════════════════════════╗\n");
+    help.push_str(&format!("║                    {}                    ║\n", shape_arabic("أوامر محيط - Ocean Commands")));
+    help.push_str("╠═══════════════════════════════════════════════════════════════════╣\n");
+    help.push_str("║                                                                   ║\n");
+    help.push_str(&format!("║  {}:                               ║\n", shape_arabic("الأوامر الأساسية (Basic Commands)")));
+    help.push_str("║  ─────────────────────────────────                                ║\n");
+    help.push_str(&format!("║  {}        │ help     │ {}                      ║\n", shape_arabic("مساعدة"), shape_arabic("عرض هذه المساعدة")));
+    help.push_str(&format!("║  {}          │ exit     │ {}                      ║\n", shape_arabic("خروج"), shape_arabic("الخروج من الصدفة")));
+    help.push_str(&format!("║  {}          │ clear    │ {}                            ║\n", shape_arabic("امسح"), shape_arabic("مسح الشاشة")));
+    help.push_str(&format!("║  {}         │ version  │ {}                           ║\n", shape_arabic("اصدار"), shape_arabic("عرض الإصدار")));
+    help.push_str("║                                                                   ║\n");
+    help.push_str(&format!("║  {}:                                   ║\n", shape_arabic("أوامر الملفات (File Commands)")));
+    help.push_str("║  ─────────────────────────────                                    ║\n");
+    help.push_str(&format!("║  {} <>      │ echo     │ {}                              ║\n", shape_arabic("اطبع"), shape_arabic("طباعة نص")));
+    help.push_str(&format!("║  {}           │ pwd      │ {}                         ║\n", shape_arabic("اين"), shape_arabic("المسار الحالي")));
+    help.push_str(&format!("║  {} <>   │ cd       │ {}                      ║\n", shape_arabic("انتقل"), shape_arabic("الانتقال إلى مجلد")));
+    help.push_str(&format!("║  {} []   │ ls       │ {}                           ║\n", shape_arabic("اعرض"), shape_arabic("عرض الملفات")));
+    help.push_str(&format!("║  {} <>    │ cat      │ {}                       ║\n", shape_arabic("اقرأ"), shape_arabic("قراءة محتوى ملف")));
+    help.push_str(&format!("║  {} <>   │ mkdir    │ {}                            ║\n", shape_arabic("انشئ"), shape_arabic("إنشاء مجلد")));
+    help.push_str(&format!("║  {} <>    │ touch    │ {}                        ║\n", shape_arabic("المس"), shape_arabic("إنشاء ملف فارغ")));
+    help.push_str(&format!("║  {} <>    │ rm       │ {}                               ║\n", shape_arabic("احذف"), shape_arabic("حذف ملف")));
+    help.push_str(&format!("║  {} <> <> │ cp       │ {}                               ║\n", shape_arabic("انسخ"), shape_arabic("نسخ ملف")));
+    help.push_str(&format!("║  {} <> <> │ mv       │ {}                               ║\n", shape_arabic("انقل"), shape_arabic("نقل ملف")));
+    help.push_str(&format!("║  {} <>     │ grep     │ {}                         ║\n", shape_arabic("ابحث"), shape_arabic("البحث في النص")));
+    help.push_str(&format!("║  {}       │ chmod    │ {}                   ║\n", shape_arabic("صلاحيات"), shape_arabic("تغيير صلاحيات الملف")));
+    help.push_str("║                                                                   ║\n");
+    help.push_str(&format!("║  {}:                                             ║\n", shape_arabic("العوامل (Operators)")));
+    help.push_str("║  ─────────────────                                                ║\n");
+    help.push_str(&format!("║  cmd1 | cmd2   │ {}    │ {}          ║\n", shape_arabic("أنبوب"), shape_arabic("توصيل مخرج الأول بمدخل الثاني")));
+    help.push_str(&format!("║  cmd > {}     │ {}      │ {}                  ║\n", shape_arabic("ملف"), shape_arabic("إلى"), shape_arabic("كتابة المخرج إلى ملف")));
+    help.push_str(&format!("║  cmd >> {}    │ {}     │ {}                  ║\n", shape_arabic("ملف"), shape_arabic("الحق"), shape_arabic("إضافة المخرج إلى ملف")));
+    help.push_str(&format!("║  cmd < {}     │ {}       │ {}                   ║\n", shape_arabic("ملف"), shape_arabic("من"), shape_arabic("قراءة المدخل من ملف")));
+    help.push_str(&format!("║  cmd1 && cmd2  │ {}        │ {}             ║\n", shape_arabic("و"), shape_arabic("تنفيذ الثاني إذا نجح الأول")));
+    help.push_str(&format!("║  cmd1 || cmd2  │ {}       │ {}             ║\n", shape_arabic("أو"), shape_arabic("تنفيذ الثاني إذا فشل الأول")));
+    help.push_str(&format!("║  cmd1 ; cmd2   │ {}       │ {}                 ║\n", shape_arabic("ثم"), shape_arabic("تنفيذ الأوامر بالترتيب")));
+    help.push_str("║                                                                   ║\n");
+    help.push_str("╚═══════════════════════════════════════════════════════════════════╝\n");
+
     println!("{}", help);
     CommandResult::None
 }
@@ -166,8 +168,9 @@ fn cmd_help() -> CommandResult {
 /// Show version (اصدار)
 fn cmd_version() -> CommandResult {
     let version = format!(
-        "محيط (Ocean) v{}\nمشروع ترقيم - Tarqeem Project\nhttps://github.com/osama1998H/ocean\n",
-        env!("CARGO_PKG_VERSION")
+        "{}\n{}\nhttps://github.com/osama1998H/ocean\n",
+        shape_arabic(&format!("محيط (Ocean) v{}", env!("CARGO_PKG_VERSION"))),
+        shape_arabic("مشروع ترقيم - Tarqeem Project")
     );
     CommandResult::Success(version)
 }

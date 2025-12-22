@@ -2,6 +2,21 @@
 //!
 //! Common utilities used across the shell.
 
+pub mod arabic;
+
+pub use arabic::{
+    shape_arabic,
+    shape_if_arabic,
+    contains_arabic,
+    // RTL alignment functions
+    enable_rtl_mode,
+    right_align,
+};
+
+// Additional RTL functions available for future use
+#[allow(unused_imports)]
+pub use arabic::{get_terminal_width, display_width, format_rtl, println_rtl};
+
 use std::path::PathBuf;
 
 /// Expand ~ to home directory
