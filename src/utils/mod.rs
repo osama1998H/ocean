@@ -3,6 +3,7 @@
 //! Common utilities used across the shell.
 
 pub mod arabic;
+pub mod colors;
 
 pub use arabic::{
     shape_arabic,
@@ -16,6 +17,11 @@ pub use arabic::{
 // Additional RTL functions available for future use
 #[allow(unused_imports)]
 pub use arabic::{get_terminal_width, display_width, format_rtl, println_rtl};
+
+// Color utilities
+pub use colors::colored_prompt;
+#[allow(unused_imports)]
+pub use colors::{colored_error, colorize_entry};
 
 use std::path::PathBuf;
 

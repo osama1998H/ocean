@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tarqeem](https://img.shields.io/badge/Tarqeem-Project-green.svg)](https://github.com/osama1998H/tarqeem)
-[![Tests](https://img.shields.io/badge/Tests-38%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-43%20passing-brightgreen.svg)]()
 
 **صدفة حديثة وخفيفة بأوامر عربية بالكامل**
 
@@ -109,6 +109,8 @@ cargo run
 | `انقل <من> <إلى>` | mv | نقل أو إعادة تسمية ملف |
 | `ابحث <نمط> [ملف]` | grep | البحث في النص |
 | `صلاحيات <وضع> <ملف>` | chmod | تغيير صلاحيات الملف |
+| `مالك <مستخدم> <ملف>` | chown | تغيير مالك الملف |
+| `رابط [-s] <مصدر> <هدف>` | ln | إنشاء رابط |
 
 ### العوامل (Operators)
 
@@ -198,12 +200,13 @@ README.md
 - [x] تشكيل الحروف العربية (arabic_reshaper)
 - [x] 38 اختبار وحدة
 
-### المرحلة 3: ميزات متقدمة
-- [ ] `مالك` (chown) - تغيير المالك
-- [ ] `رابط` (ln) - إنشاء روابط
-- [ ] الإكمال التلقائي
-- [ ] تلوين الأوامر
-- [ ] سجل الأوامر (history)
+### المرحلة 3: ميزات متقدمة ✅
+- [x] `مالك` (chown) - تغيير المالك
+- [x] `رابط` (ln) - إنشاء روابط
+- [x] الإكمال التلقائي (Tab completion)
+- [x] تلوين الأوامر والمخرجات
+- [x] سجل الأوامر (history) - ~/.ocean_history
+- [x] 43 اختبار وحدة
 
 ### المرحلة 4: تكامل ترقيم
 - [ ] تشغيل ملفات `.trq` مباشرة
@@ -233,7 +236,9 @@ cargo test -- --nocapture
 - اختبارات Parser: 13
 - اختبارات AST: 3
 - اختبارات RTL/Arabic: 9
-- **المجموع: 38 اختبار ناجح**
+- اختبارات الألوان: 2
+- اختبارات الإكمال التلقائي: 3
+- **المجموع: 43 اختبار ناجح**
 
 ---
 
@@ -295,7 +300,10 @@ A modern, lightweight shell with Arabic commands. Part of the Tarqeem Arabic Pro
 - **Pipes & Redirection**: Full support for `|`, `>`, `>>`, `<`
 - **Command Chaining**: `&&`, `||`, `;` operators
 - **Search**: Built-in `ابحث` (grep) command
-- **38 Unit Tests**: Comprehensive test coverage
+- **Auto-completion**: Tab completion for commands and files
+- **Command History**: Arrow key navigation, persisted in ~/.ocean_history
+- **Colored Output**: Syntax highlighting for directories, executables, and errors
+- **43 Unit Tests**: Comprehensive test coverage
 
 ## Quick Start
 
@@ -322,6 +330,8 @@ cargo build --release
 | `احذف` | rm | Delete file |
 | `ابحث` | grep | Search in text |
 | `صلاحيات` | chmod | Change permissions |
+| `مالك` | chown | Change owner |
+| `رابط` | ln | Create link |
 | `خروج` | exit | Exit shell |
 
 ## Operators
@@ -368,7 +378,7 @@ Input → Lexer → Parser → Executor → Output
 
 ```bash
 cargo test
-# 38 tests passing
+# 43 tests passing
 ```
 
 See the Arabic documentation above for complete details.

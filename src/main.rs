@@ -24,15 +24,19 @@ mod lexer;
 mod parser;
 mod executor;
 mod utils;
+mod repl;
 
 use std::env;
-use std::io::{self, Write};
 use std::path::PathBuf;
+
+use rustyline::error::ReadlineError;
+use rustyline::{Config, Editor};
 
 use lexer::Lexer;
 use parser::Parser;
 use executor::{Executor, CommandResult};
-use utils::{shape_arabic, shape_if_arabic, contains_arabic, enable_rtl_mode, right_align};
+use repl::OceanHelper;
+use utils::{shape_arabic, shape_if_arabic, contains_arabic, enable_rtl_mode, right_align, colored_prompt};
 
 /// Shell name in Arabic
 const SHELL_NAME: &str = "محيط";
@@ -50,19 +54,64 @@ fn main() {
     // Create executor with RTL padding setting
     let mut executor = Executor::new(use_padding);
 
+    // Initialize rustyline with auto-completion
+    let config = Config::builder()
+        .auto_add_history(true)
+        .build();
+
+    let mut rl: Editor<OceanHelper, _> = match Editor::with_config(config) {
+        Ok(editor) => editor,
+        Err(e) => {
+            eprintln!("Failed to initialize readline: {}", e);
+            // Fallback to basic REPL
+            run_basic_repl(&mut executor, use_padding);
+            return;
+        }
+    };
+
+    // Set the completion helper
+    rl.set_helper(Some(OceanHelper::new()));
+
+    // Load history from file
+    let history_path = dirs::home_dir()
+        .map(|h| h.join(".ocean_history"))
+        .unwrap_or_else(|| PathBuf::from(".ocean_history"));
+    let _ = rl.load_history(&history_path);
+
     // Main REPL loop
     loop {
-        // Print prompt with current directory
-        print_prompt(use_padding);
+        // Build colored prompt
+        let cwd = env::current_dir()
+            .map(|p| shorten_path(&p))
+            .unwrap_or_else(|_| "?".to_string());
 
-        // Read input
-        let input = match read_input() {
-            Some(line) => line,
-            None => continue,
+        let prompt = if use_padding {
+            // For RTL terminals, use right-aligned prompt
+            right_align(&colored_prompt(&shape_arabic(SHELL_NAME), &cwd))
+        } else {
+            colored_prompt(&shape_arabic(SHELL_NAME), &cwd)
+        };
+
+        // Read input using rustyline
+        let input = match rl.readline(&prompt) {
+            Ok(line) => line,
+            Err(ReadlineError::Interrupted) => {
+                // Ctrl+C - just continue
+                continue;
+            }
+            Err(ReadlineError::Eof) => {
+                // Ctrl+D - exit
+                print_rtl_line(&shape_arabic("مع السلامة! (Goodbye!)"), use_padding);
+                break;
+            }
+            Err(err) => {
+                print_rtl_line(&format!("Error: {:?}", err), use_padding);
+                continue;
+            }
         };
 
         // Skip empty input
-        if input.is_empty() {
+        if input.trim().is_empty() {
             continue;
         }
 
@@ -85,11 +134,92 @@ fn main() {
         match result {
             CommandResult::Exit(code) => {
                 print_rtl_line(&shape_arabic("مع السلامة! (Goodbye!)"), use_padding);
+                // Save history before exit
+                let _ = rl.save_history(&history_path);
                 std::process::exit(code);
             }
             CommandResult::Success(output) => {
                 if !output.is_empty() {
                     // Print each line with RTL alignment if needed
+                    for line in output.lines() {
+                        print_rtl_line(&shape_if_arabic(line), use_padding);
+                    }
+                }
+            }
+            CommandResult::Error(msg) => {
+                // Print errors in red
+                use colored::Colorize;
+                let error_msg = shape_if_arabic(&msg).red().to_string();
+                print_rtl_line(&error_msg, use_padding);
+            }
+            CommandResult::None => {}
+        }
+    }
+
+    // Save history on normal exit
+    let _ = rl.save_history(&history_path);
+}
+
+/// Fallback basic REPL without rustyline features
+fn run_basic_repl(executor: &mut Executor, use_padding: bool) {
+    use std::io::{self, Write};
+
+    loop {
+        // Print prompt with current directory
+        let cwd = env::current_dir()
+            .map(|p| shorten_path(&p))
+            .unwrap_or_else(|_| "?".to_string());
+
+        let prompt = format!("{} [{}]> ", shape_arabic(SHELL_NAME), cwd);
+
+        if use_padding {
+            print!("{}", right_align(&prompt));
+        } else {
+            print!("{}", prompt);
+        }
+        io::stdout().flush().unwrap();
+
+        // Read input
+        let mut input = String::new();
+        match io::stdin().read_line(&mut input) {
+            Ok(0) => {
+                // EOF (Ctrl+D)
+                println!();
+                print_rtl_line(&shape_arabic("مع السلامة! (Goodbye!)"), use_padding);
+                return;
+            }
+            Ok(_) => {}
+            Err(_) => continue,
+        }
+
+        let input = input.trim();
+        if input.is_empty() {
+            continue;
+        }
+
+        // Tokenize
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize();
+
+        // Parse
+        let mut parser = Parser::new(tokens);
+        let ast = match parser.parse() {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                print_rtl_line(&e.to_string(), use_padding);
+                continue;
+            }
+        };
+
+        // Execute
+        let result = executor.execute(ast);
+        match result {
+            CommandResult::Exit(code) => {
+                print_rtl_line(&shape_arabic("مع السلامة! (Goodbye!)"), use_padding);
+                std::process::exit(code);
+            }
+            CommandResult::Success(output) => {
+                if !output.is_empty() {
                     for line in output.lines() {
                         print_rtl_line(&shape_if_arabic(line), use_padding);
                     }
@@ -147,25 +277,6 @@ fn print_welcome(use_padding: bool) {
     }
 }
 
-/// Print the shell prompt
-fn print_prompt(use_padding: bool) {
-    // Get current directory
-    let cwd = env::current_dir()
-        .map(|p| shorten_path(&p))
-        .unwrap_or_else(|_| "?".to_string());
-
-    // Build prompt: محيط [path]>
-    // Shape the Arabic shell name for proper display
-    let prompt = format!("{} [{}]> ", shape_arabic(SHELL_NAME), cwd);
-
-    if use_padding {
-        // Right-align the prompt for RTL
-        print!("{}", right_align(&prompt));
-    } else {
-        print!("{}", prompt);
-    }
-    io::stdout().flush().unwrap();
-}
 
 /// Shorten path for display (replace home with ~)
 fn shorten_path(path: &PathBuf) -> String {
@@ -177,16 +288,3 @@ fn shorten_path(path: &PathBuf) -> String {
     path.display().to_string()
 }
 
-/// Read a line of input from the user
-fn read_input() -> Option<String> {
-    let mut input = String::new();
-    match io::stdin().read_line(&mut input) {
-        Ok(0) => {
-            // EOF (Ctrl+D)
-            println!();
-            Some("خروج".to_string())
-        }
-        Ok(_) => Some(input.trim().to_string()),
-        Err(_) => None,
-    }
-}

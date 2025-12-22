@@ -66,6 +66,12 @@ pub fn execute_builtin(name: &str, args: &[&str], input: Option<&str>) -> Option
         // Permissions (chmod)
         "صلاحيات" | "chmod" => Some(cmd_chmod(args)),
 
+        // Change owner (chown)
+        "مالك" | "chown" => Some(cmd_chown(args)),
+
+        // Create link (ln)
+        "رابط" | "ln" | "link" => Some(cmd_ln(args)),
+
         // Not a builtin
         _ => None,
     }
@@ -148,6 +154,8 @@ fn cmd_help() -> CommandResult {
     help.push_str(&format!("║  {} <> <> │ mv       │ {}                               ║\n", shape_arabic("انقل"), shape_arabic("نقل ملف")));
     help.push_str(&format!("║  {} <>     │ grep     │ {}                         ║\n", shape_arabic("ابحث"), shape_arabic("البحث في النص")));
     help.push_str(&format!("║  {}       │ chmod    │ {}                   ║\n", shape_arabic("صلاحيات"), shape_arabic("تغيير صلاحيات الملف")));
+    help.push_str(&format!("║  {} <>     │ chown    │ {}                        ║\n", shape_arabic("مالك"), shape_arabic("تغيير مالك الملف")));
+    help.push_str(&format!("║  {} <>      │ ln       │ {}                            ║\n", shape_arabic("رابط"), shape_arabic("إنشاء رابط")));
     help.push_str("║                                                                   ║\n");
     help.push_str(&format!("║  {}:                                             ║\n", shape_arabic("العوامل (Operators)")));
     help.push_str("║  ─────────────────                                                ║\n");
@@ -234,6 +242,8 @@ fn cmd_cd(args: &[&str]) -> CommandResult {
 
 /// List directory (اعرض)
 fn cmd_ls(args: &[&str]) -> CommandResult {
+    use colored::Colorize;
+
     let path = if args.is_empty() {
         env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf())
     } else {
@@ -248,10 +258,29 @@ fn cmd_ls(args: &[&str]) -> CommandResult {
                 let metadata = entry.metadata();
 
                 let formatted = if let Ok(meta) = metadata {
-                    if meta.is_dir() {
-                        format!("\x1B[1;34m{}/\x1B[0m", name)
+                    let is_dir = meta.is_dir();
+                    let is_symlink = meta.file_type().is_symlink();
+
+                    #[cfg(unix)]
+                    let is_exec = {
+                        use std::os::unix::fs::PermissionsExt;
+                        meta.permissions().mode() & 0o111 != 0
+                    };
+                    #[cfg(not(unix))]
+                    let is_exec = false;
+
+                    if is_symlink {
+                        // Symlinks in magenta
+                        name.magenta().to_string()
+                    } else if is_dir {
+                        // Directories in bold blue with trailing /
+                        format!("{}/", name.blue().bold())
+                    } else if is_exec {
+                        // Executable files in bold green
+                        name.green().bold().to_string()
                     } else if meta.permissions().readonly() {
-                        format!("\x1B[1;31m{}\x1B[0m", name)
+                        // Read-only files in red
+                        name.red().to_string()
                     } else {
                         name
                     }
@@ -518,5 +547,152 @@ fn cmd_chmod(args: &[&str]) -> CommandResult {
 fn cmd_chmod(_args: &[&str]) -> CommandResult {
     CommandResult::Error(
         "خطأ: أمر صلاحيات غير مدعوم على هذا النظام\nError: chmod not supported on this platform".to_string()
+    )
+}
+
+/// Chown command (مالك) - Change file owner
+#[cfg(unix)]
+fn cmd_chown(args: &[&str]) -> CommandResult {
+    use nix::unistd::{chown, User, Group, Uid, Gid};
+
+    if args.len() < 2 {
+        return CommandResult::Error(
+            "خطأ: يرجى تحديد المالك والملف\nالاستخدام: مالك مستخدم[:مجموعة] ملف\nError: Please specify owner and file\nUsage: chown user[:group] file".to_string()
+        );
+    }
+
+    let owner_spec = args[0];
+    let file_path = expand_tilde(args[1]);
+
+    // Parse user:group or just user
+    let (user_str, group_str) = if owner_spec.contains(':') {
+        let parts: Vec<&str> = owner_spec.split(':').collect();
+        (parts[0], parts.get(1).copied())
+    } else {
+        (owner_spec, None)
+    };
+
+    // Resolve user - try as name first, then as numeric UID
+    let uid: Option<Uid> = if user_str.is_empty() {
+        None
+    } else if let Ok(uid_num) = user_str.parse::<u32>() {
+        Some(Uid::from_raw(uid_num))
+    } else {
+        match User::from_name(user_str) {
+            Ok(Some(user)) => Some(user.uid),
+            Ok(None) => {
+                return CommandResult::Error(format!(
+                    "خطأ: المستخدم '{}' غير موجود / Error: User '{}' not found",
+                    user_str, user_str
+                ));
+            }
+            Err(e) => {
+                return CommandResult::Error(format!(
+                    "خطأ: فشل البحث عن المستخدم - {} / Error: Failed to lookup user - {}",
+                    e, e
+                ));
+            }
+        }
+    };
+
+    // Resolve group if provided
+    let gid: Option<Gid> = match group_str {
+        Some(g) if !g.is_empty() => {
+            if let Ok(gid_num) = g.parse::<u32>() {
+                Some(Gid::from_raw(gid_num))
+            } else {
+                match Group::from_name(g) {
+                    Ok(Some(group)) => Some(group.gid),
+                    Ok(None) => {
+                        return CommandResult::Error(format!(
+                            "خطأ: المجموعة '{}' غير موجودة / Error: Group '{}' not found",
+                            g, g
+                        ));
+                    }
+                    Err(e) => {
+                        return CommandResult::Error(format!(
+                            "خطأ: فشل البحث عن المجموعة - {} / Error: Failed to lookup group - {}",
+                            e, e
+                        ));
+                    }
+                }
+            }
+        }
+        _ => None,
+    };
+
+    // Apply ownership change
+    match chown(&file_path, uid, gid) {
+        Ok(_) => CommandResult::None,
+        Err(e) => CommandResult::Error(format!(
+            "خطأ: فشل تغيير مالك '{}' - {} / Error: Failed to change owner of '{}' - {}",
+            file_path.display(), e, file_path.display(), e
+        )),
+    }
+}
+
+#[cfg(not(unix))]
+fn cmd_chown(_args: &[&str]) -> CommandResult {
+    CommandResult::Error(
+        "خطأ: أمر مالك غير مدعوم على هذا النظام\nError: chown not supported on this platform".to_string()
+    )
+}
+
+/// Ln command (رابط) - Create symbolic or hard links
+#[cfg(unix)]
+fn cmd_ln(args: &[&str]) -> CommandResult {
+    use std::os::unix::fs::symlink;
+    use std::fs::hard_link;
+
+    if args.is_empty() {
+        return CommandResult::Error(
+            "خطأ: يرجى تحديد المصدر والهدف\nالاستخدام: رابط [-s|-ر] مصدر هدف\nError: Please specify source and target\nUsage: ln [-s] source target".to_string()
+        );
+    }
+
+    // Check for symbolic link flag (-s or -ر for Arabic)
+    let (symbolic, source_idx) = if args[0] == "-s" || args[0] == "-ر" || args[0] == "--symbolic" {
+        (true, 1)
+    } else {
+        (false, 0)
+    };
+
+    if args.len() < source_idx + 2 {
+        return CommandResult::Error(
+            "خطأ: يرجى تحديد المصدر والهدف\nالاستخدام: رابط [-s|-ر] مصدر هدف\nError: Please specify source and target\nUsage: ln [-s] source target".to_string()
+        );
+    }
+
+    let source = expand_tilde(args[source_idx]);
+    let target = expand_tilde(args[source_idx + 1]);
+
+    // Create the link
+    let result = if symbolic {
+        symlink(&source, &target)
+    } else {
+        hard_link(&source, &target)
+    };
+
+    match result {
+        Ok(_) => CommandResult::None,
+        Err(e) => {
+            let link_type = if symbolic {
+                "الرابط الرمزي / symbolic link"
+            } else {
+                "الرابط الصلب / hard link"
+            };
+            CommandResult::Error(format!(
+                "خطأ: فشل إنشاء {} من '{}' إلى '{}' - {}\nError: Failed to create {} from '{}' to '{}' - {}",
+                link_type, source.display(), target.display(), e,
+                link_type, source.display(), target.display(), e
+            ))
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn cmd_ln(_args: &[&str]) -> CommandResult {
+    CommandResult::Error(
+        "خطأ: أمر رابط غير مدعوم على هذا النظام\nError: ln not supported on this platform".to_string()
     )
 }
