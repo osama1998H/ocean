@@ -16,31 +16,23 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::process::{Command as ProcessCommand, Stdio};
 
-/// Result of command execution
 #[derive(Debug, Clone, PartialEq)]
 pub enum CommandResult {
-    /// Command succeeded with optional output
     Success(String),
-    /// Command failed with error message
     Error(String),
-    /// Shell should exit with code
     Exit(i32),
-    /// No output (for commands that print directly)
     None,
 }
 
 impl CommandResult {
-    /// Check if result indicates success
     pub fn is_success(&self) -> bool {
         matches!(self, CommandResult::Success(_) | CommandResult::None)
     }
 
-    /// Check if result indicates exit
     pub fn is_exit(&self) -> bool {
         matches!(self, CommandResult::Exit(_))
     }
 
-    /// Get output if available
     #[allow(dead_code)]
     pub fn output(&self) -> Option<&str> {
         match self {
@@ -50,11 +42,8 @@ impl CommandResult {
     }
 }
 
-/// Main executor for shell commands
 pub struct Executor {
-    /// Last exit code
     pub last_exit_code: i32,
-    /// Whether to use padding for RTL alignment (non-VTE terminals)
     pub use_rtl_padding: bool,
 }
 
@@ -65,7 +54,6 @@ impl Default for Executor {
 }
 
 impl Executor {
-    /// Create a new executor
     pub fn new(use_rtl_padding: bool) -> Self {
         Self {
             last_exit_code: 0,
@@ -73,12 +61,10 @@ impl Executor {
         }
     }
 
-    /// Execute a command and return the result
     pub fn execute(&mut self, cmd: Command) -> CommandResult {
         self.execute_with_input(cmd, None)
     }
 
-    /// Execute a command with optional stdin input
     pub fn execute_with_input(&mut self, cmd: Command, input: Option<String>) -> CommandResult {
         match cmd {
             Command::Empty => CommandResult::None,
@@ -129,7 +115,6 @@ impl Executor {
         }
     }
 
-    /// Execute a simple command
     fn execute_simple(
         &mut self,
         name: &str,
@@ -195,7 +180,6 @@ impl Executor {
         result
     }
 
-    /// Execute a pipeline of commands
     fn execute_pipeline(&mut self, cmds: Vec<Command>) -> CommandResult {
         if cmds.is_empty() {
             return CommandResult::None;
@@ -219,7 +203,6 @@ impl Executor {
             }
         }
 
-        // Return the final output
         match input {
             Some(output) => {
                 // Print final output with Arabic shaping and RTL alignment
@@ -237,7 +220,6 @@ impl Executor {
         }
     }
 
-    /// Execute a builtin command or external program
     fn execute_builtin_or_external(
         &mut self,
         name: &str,
@@ -254,7 +236,6 @@ impl Executor {
         self.execute_external(name, args, input)
     }
 
-    /// Execute an external command
     fn execute_external(
         &mut self,
         name: &str,

@@ -16,7 +16,6 @@ pub mod executor;
 pub mod commands;
 pub mod utils;
 
-/// Re-export commonly used types
 pub use lexer::Lexer;
 pub use parser::{Parser, Command};
 pub use executor::{Executor, CommandResult};

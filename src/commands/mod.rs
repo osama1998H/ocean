@@ -14,71 +14,49 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 
-/// Execute a builtin command if it exists
-/// Returns None if the command is not a builtin
 pub fn execute_builtin(name: &str, args: &[&str], input: Option<&str>) -> Option<CommandResult> {
     match name {
-        // Exit commands
         "خروج" | "exit" | "quit" => Some(CommandResult::Exit(0)),
 
-        // Help
         "مساعدة" | "help" | "?" => Some(cmd_help()),
 
-        // Print/Echo
         "اطبع" | "echo" => Some(cmd_echo(args, input)),
 
-        // Clear screen
         "امسح" | "clear" | "cls" => Some(cmd_clear()),
 
-        // Current directory
         "اين" | "pwd" => Some(cmd_pwd()),
 
-        // Change directory
         "انتقل" | "cd" => Some(cmd_cd(args)),
 
-        // List files
         "اعرض" | "ls" | "dir" => Some(cmd_ls(args)),
 
-        // Read file
         "اقرأ" | "cat" => Some(cmd_cat(args, input)),
 
-        // Create directory
         "انشئ" | "mkdir" => Some(cmd_mkdir(args)),
 
-        // Create file
         "المس" | "touch" => Some(cmd_touch(args)),
 
-        // Delete
         "احذف" | "rm" => Some(cmd_rm(args)),
 
-        // Copy
         "انسخ" | "cp" => Some(cmd_cp(args)),
 
-        // Move
         "انقل" | "mv" => Some(cmd_mv(args)),
 
-        // Version
         "اصدار" | "version" => Some(cmd_version()),
 
-        // Search
         "ابحث" | "grep" | "search" => Some(cmd_search(args, input)),
 
-        // Permissions (chmod)
         "صلاحيات" | "chmod" => Some(cmd_chmod(args)),
 
-        // Change owner (chown)
         "مالك" | "chown" => Some(cmd_chown(args)),
 
-        // Create link (ln)
         "رابط" | "ln" | "link" => Some(cmd_ln(args)),
 
-        // Not a builtin
         _ => None,
     }
 }
 
-/// Legacy execute function for backward compatibility
-/// Returns true if shell should exit
+
 #[allow(dead_code)]
 pub fn execute_command(input: &str) -> bool {
     let parts: Vec<&str> = input.split_whitespace().collect();
@@ -105,7 +83,6 @@ pub fn execute_command(input: &str) -> bool {
         return false;
     }
 
-    // External command
     use std::process::Command;
     match Command::new(command).args(args).status() {
         Ok(status) => {
@@ -124,9 +101,7 @@ pub fn execute_command(input: &str) -> bool {
     false
 }
 
-/// Show help message (مساعدة)
 fn cmd_help() -> CommandResult {
-    // Build help text with shaped Arabic for each line
     let mut help = String::new();
     help.push('\n');
     help.push_str("╔═══════════════════════════════════════════════════════════════════╗\n");
@@ -173,7 +148,6 @@ fn cmd_help() -> CommandResult {
     CommandResult::None
 }
 
-/// Show version (اصدار)
 fn cmd_version() -> CommandResult {
     let version = format!(
         "{}\n{}\nhttps://github.com/osama1998H/ocean\n",
@@ -183,7 +157,6 @@ fn cmd_version() -> CommandResult {
     CommandResult::Success(version)
 }
 
-/// Echo command (اطبع)
 fn cmd_echo(args: &[&str], input: Option<&str>) -> CommandResult {
     let output = if args.is_empty() {
         if let Some(inp) = input {
@@ -197,7 +170,6 @@ fn cmd_echo(args: &[&str], input: Option<&str>) -> CommandResult {
     CommandResult::Success(output)
 }
 
-/// Clear screen (امسح)
 fn cmd_clear() -> CommandResult {
     // ANSI escape code to clear screen and move cursor to top
     print!("\x1B[2J\x1B[1;1H");
@@ -205,7 +177,6 @@ fn cmd_clear() -> CommandResult {
     CommandResult::None
 }
 
-/// Print working directory (اين)
 fn cmd_pwd() -> CommandResult {
     match env::current_dir() {
         Ok(path) => CommandResult::Success(format!("{}\n", path.display())),
@@ -216,7 +187,6 @@ fn cmd_pwd() -> CommandResult {
     }
 }
 
-/// Change directory (انتقل)
 fn cmd_cd(args: &[&str]) -> CommandResult {
     let path = if args.is_empty() {
         match dirs::home_dir() {
@@ -240,7 +210,6 @@ fn cmd_cd(args: &[&str]) -> CommandResult {
     }
 }
 
-/// List directory (اعرض)
 fn cmd_ls(args: &[&str]) -> CommandResult {
     use colored::Colorize;
 
@@ -301,9 +270,7 @@ fn cmd_ls(args: &[&str]) -> CommandResult {
     }
 }
 
-/// Read file (اقرأ)
 fn cmd_cat(args: &[&str], input: Option<&str>) -> CommandResult {
-    // If we have input from a pipe, just pass it through
     if let Some(inp) = input {
         if args.is_empty() {
             return CommandResult::Success(inp.to_string());
@@ -332,7 +299,6 @@ fn cmd_cat(args: &[&str], input: Option<&str>) -> CommandResult {
     CommandResult::Success(output)
 }
 
-/// Create directory (انشئ)
 fn cmd_mkdir(args: &[&str]) -> CommandResult {
     if args.is_empty() {
         return CommandResult::Error(
@@ -352,7 +318,6 @@ fn cmd_mkdir(args: &[&str]) -> CommandResult {
     CommandResult::None
 }
 
-/// Create empty file (المس)
 fn cmd_touch(args: &[&str]) -> CommandResult {
     if args.is_empty() {
         return CommandResult::Error(
@@ -372,7 +337,6 @@ fn cmd_touch(args: &[&str]) -> CommandResult {
     CommandResult::None
 }
 
-/// Delete file (احذف)
 fn cmd_rm(args: &[&str]) -> CommandResult {
     if args.is_empty() {
         return CommandResult::Error(
@@ -399,7 +363,6 @@ fn cmd_rm(args: &[&str]) -> CommandResult {
     CommandResult::None
 }
 
-/// Copy file (انسخ)
 fn cmd_cp(args: &[&str]) -> CommandResult {
     if args.len() < 2 {
         return CommandResult::Error(
@@ -420,7 +383,6 @@ fn cmd_cp(args: &[&str]) -> CommandResult {
     CommandResult::None
 }
 
-/// Move file (انقل)
 fn cmd_mv(args: &[&str]) -> CommandResult {
     if args.len() < 2 {
         return CommandResult::Error(
@@ -441,7 +403,6 @@ fn cmd_mv(args: &[&str]) -> CommandResult {
     CommandResult::None
 }
 
-/// Search command (ابحث) - grep-like functionality
 fn cmd_search(args: &[&str], input: Option<&str>) -> CommandResult {
     if args.is_empty() {
         return CommandResult::Error(
@@ -451,7 +412,6 @@ fn cmd_search(args: &[&str], input: Option<&str>) -> CommandResult {
 
     let pattern = args[0];
 
-    // If we have input from a pipe, search in that
     if let Some(inp) = input {
         let matching_lines: Vec<&str> = inp
             .lines()
@@ -464,7 +424,6 @@ fn cmd_search(args: &[&str], input: Option<&str>) -> CommandResult {
         return CommandResult::Success(matching_lines.join("\n") + "\n");
     }
 
-    // Otherwise, search in files
     if args.len() < 2 {
         return CommandResult::Error(
             "خطأ: يرجى تحديد ملف للبحث فيه أو استخدام الأنبوب\nError: Please specify a file to search or use pipe".to_string()
@@ -498,7 +457,6 @@ fn cmd_search(args: &[&str], input: Option<&str>) -> CommandResult {
     CommandResult::Success(output)
 }
 
-/// Chmod command (صلاحيات)
 #[cfg(unix)]
 fn cmd_chmod(args: &[&str]) -> CommandResult {
     use std::os::unix::fs::PermissionsExt;
@@ -512,7 +470,6 @@ fn cmd_chmod(args: &[&str]) -> CommandResult {
     let mode_str = args[0];
     let file = args[1];
 
-    // Parse mode (supports octal like 755)
     let mode = match u32::from_str_radix(mode_str, 8) {
         Ok(m) => m,
         Err(_) => {
@@ -550,7 +507,6 @@ fn cmd_chmod(_args: &[&str]) -> CommandResult {
     )
 }
 
-/// Chown command (مالك) - Change file owner
 #[cfg(unix)]
 fn cmd_chown(args: &[&str]) -> CommandResult {
     use nix::unistd::{chown, User, Group, Uid, Gid};
@@ -564,7 +520,6 @@ fn cmd_chown(args: &[&str]) -> CommandResult {
     let owner_spec = args[0];
     let file_path = expand_tilde(args[1]);
 
-    // Parse user:group or just user
     let (user_str, group_str) = if owner_spec.contains(':') {
         let parts: Vec<&str> = owner_spec.split(':').collect();
         (parts[0], parts.get(1).copied())
@@ -572,7 +527,6 @@ fn cmd_chown(args: &[&str]) -> CommandResult {
         (owner_spec, None)
     };
 
-    // Resolve user - try as name first, then as numeric UID
     let uid: Option<Uid> = if user_str.is_empty() {
         None
     } else if let Ok(uid_num) = user_str.parse::<u32>() {
@@ -595,7 +549,6 @@ fn cmd_chown(args: &[&str]) -> CommandResult {
         }
     };
 
-    // Resolve group if provided
     let gid: Option<Gid> = match group_str {
         Some(g) if !g.is_empty() => {
             if let Ok(gid_num) = g.parse::<u32>() {
@@ -621,7 +574,6 @@ fn cmd_chown(args: &[&str]) -> CommandResult {
         _ => None,
     };
 
-    // Apply ownership change
     match chown(&file_path, uid, gid) {
         Ok(_) => CommandResult::None,
         Err(e) => CommandResult::Error(format!(
@@ -638,7 +590,6 @@ fn cmd_chown(_args: &[&str]) -> CommandResult {
     )
 }
 
-/// Ln command (رابط) - Create symbolic or hard links
 #[cfg(unix)]
 fn cmd_ln(args: &[&str]) -> CommandResult {
     use std::os::unix::fs::symlink;
@@ -666,7 +617,6 @@ fn cmd_ln(args: &[&str]) -> CommandResult {
     let source = expand_tilde(args[source_idx]);
     let target = expand_tilde(args[source_idx + 1]);
 
-    // Create the link
     let result = if symbolic {
         symlink(&source, &target)
     } else {

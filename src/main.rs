@@ -38,9 +38,7 @@ use executor::{Executor, CommandResult};
 use repl::OceanHelper;
 use utils::{shape_arabic, shape_if_arabic, contains_arabic, enable_rtl_mode, right_align, colored_prompt};
 
-/// Shell name in Arabic
 const SHELL_NAME: &str = "محيط";
-/// Shell version
 const VERSION: &str = "0.1.0";
 
 fn main() {
@@ -160,7 +158,6 @@ fn main() {
     let _ = rl.save_history(&history_path);
 }
 
-/// Fallback basic REPL without rustyline features
 fn run_basic_repl(executor: &mut Executor, use_padding: bool) {
     use std::io::{self, Write};
 
@@ -233,7 +230,6 @@ fn run_basic_repl(executor: &mut Executor, use_padding: bool) {
     }
 }
 
-/// Print a line with RTL alignment if needed
 fn print_rtl_line(text: &str, use_padding: bool) {
     if use_padding && contains_arabic(text) {
         println!("{}", right_align(text));
@@ -242,7 +238,6 @@ fn print_rtl_line(text: &str, use_padding: bool) {
     }
 }
 
-/// Print welcome message when shell starts
 fn print_welcome(use_padding: bool) {
     // Build the welcome banner as a single block
     // The banner is a fixed-width box that should be displayed as-is
@@ -278,7 +273,6 @@ fn print_welcome(use_padding: bool) {
 }
 
 
-/// Shorten path for display (replace home with ~)
 fn shorten_path(path: &PathBuf) -> String {
     if let Some(home) = dirs::home_dir() {
         if let Ok(relative) = path.strip_prefix(&home) {

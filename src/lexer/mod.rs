@@ -18,24 +18,15 @@ use unicode_normalization::UnicodeNormalization;
 /// - Pipe and redirection operators
 /// - Command chaining (&&, ||, ;)
 pub struct Lexer {
-    /// Source characters (NFC normalized)
     source: Vec<char>,
-    /// Current position in source
     position: usize,
-    /// Start position of current token
     token_start: usize,
-    /// Current line number (1-indexed)
     line: usize,
-    /// Current column number (1-indexed)
     column: usize,
-    /// Column at start of current token
     token_start_column: usize,
 }
 
 impl Lexer {
-    /// Create a new lexer from source text
-    ///
-    /// Performs NFC Unicode normalization for consistent Arabic handling.
     pub fn new(source: &str) -> Self {
         // Normalize Unicode to NFC form (like Tarqeem)
         let normalized: String = source.nfc().collect();
@@ -49,7 +40,6 @@ impl Lexer {
         }
     }
 
-    /// Tokenize the entire input
     pub fn tokenize(&mut self) -> Vec<Token> {
         let mut tokens = Vec::new();
 
@@ -65,7 +55,6 @@ impl Lexer {
         tokens
     }
 
-    /// Get the next token
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
         self.token_start = self.position;
@@ -128,7 +117,6 @@ impl Lexer {
         }
     }
 
-    /// Scan a word (command name or unquoted argument)
     fn scan_word(&mut self, first: char) -> Token {
         let mut value = String::new();
         value.push(first);
@@ -206,7 +194,6 @@ impl Lexer {
         )
     }
 
-    /// Check if character is Arabic letter
     #[allow(dead_code)]
     fn is_arabic_letter(&self, c: char) -> bool {
         matches!(c,
@@ -226,13 +213,11 @@ impl Lexer {
         )
     }
 
-    /// Check if character is Arabic-Indic digit (٠-٩)
     #[allow(dead_code)]
     fn is_arabic_digit(&self, c: char) -> bool {
         matches!(c, '٠'..='٩')  // U+0660 - U+0669
     }
 
-    /// Skip whitespace (but not newlines - they're significant)
     fn skip_whitespace(&mut self) {
         while !self.is_at_end() {
             match self.peek() {
@@ -244,19 +229,16 @@ impl Lexer {
         }
     }
 
-    /// Skip to end of line (for comments)
     fn skip_line(&mut self) {
         while !self.is_at_end() && self.peek() != '\n' {
             self.advance();
         }
     }
 
-    /// Check if at end of input
     fn is_at_end(&self) -> bool {
         self.position >= self.source.len()
     }
 
-    /// Peek at current character without consuming
     fn peek(&self) -> char {
         if self.is_at_end() {
             '\0'
@@ -265,7 +247,6 @@ impl Lexer {
         }
     }
 
-    /// Advance and return current character
     fn advance(&mut self) -> char {
         let c = self.source[self.position];
         self.position += 1;
@@ -278,7 +259,6 @@ impl Lexer {
         c
     }
 
-    /// Match and consume expected character
     fn match_char(&mut self, expected: char) -> bool {
         if self.is_at_end() || self.source[self.position] != expected {
             false
@@ -289,7 +269,6 @@ impl Lexer {
         }
     }
 
-    /// Create a token with the current lexeme
     fn make_token(&self, kind: TokenKind) -> Token {
         let lexeme: String = self.source[self.token_start..self.position].iter().collect();
         Token::new(
@@ -299,7 +278,6 @@ impl Lexer {
         )
     }
 
-    /// Create an error token
     fn make_error(&self, message: &str) -> Token {
         Token::new(
             TokenKind::Error(message.to_string()),
